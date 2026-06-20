@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RatrixCam — Live Monitor</title>
+<style>
+  /* ── tokens ─────────────────────────────────────────────── */
+  :root {
+    --bg:          #0d0f12;
+    --surface:     #161a20;
+    --surface2:    #1e242d;
+    --border:      #2a3140;
+    --accent:      #3b9eff;
+    --accent-dim:  #1a4a80;
+    --danger:      #e05252;
+    --danger-dim:  #6b2121;
+    --success:     #3ec87a;
+    --muted:       #5a6478;
+    --text:        #d4dae6;
+    --text-bright: #eef1f6;
+    --mono:        "JetBrains Mono", "Fira Mono", ui-monospace, monospace;
+    --sans:        "Inter", system-ui, sans-serif;
+    --radius:      6px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── header ─────────────────────────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  h1 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-bright);
+    letter-spacing: 0.3px;
+  }
+
+  #study-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* live clock */
+  #clock {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  /* ── global controls ─────────────────────────────────────── */
+  .global-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .global-bar span {
+    font-size: 12px;
+    color: var(--muted);
+    margin-right: 4px;
+  }
+
+  /* ── buttons ─────────────────────────────────────────────── */
+  button {
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 7px 14px;
+    transition: opacity 0.15s, background 0.15s;
+  }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button:not(:disabled):hover { opacity: 0.85; }
+
+  .btn-start {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-stop {
+    background: var(--danger);
+    color: #fff;
+  }
+  .btn-ghost {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  /* ── save path ───────────────────────────────────────────── */
+  .save-info {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 360px;
+  }
+
+  /* ── main camera grid ────────────────────────────────────── */
+  #camera-grid {
+    display: grid;
+    /* columns will be set dynamically based on camera count */
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    padding: 20px 24px;
+    flex: 1;
+  }
+
+  @media (max-width: 900px) {
+    #camera-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 520px) {
+    #camera-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── camera card ─────────────────────────────────────────── */
+  .cam-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.2s;
+  }
+  .cam-card.running {
+    border-color: var(--accent-dim);
+  }
+  .cam-card.running .cam-status-dot {
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+  }
+
+  /* feed area */
+  .cam-feed {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    background: #000;
+    overflow: hidden;
+  }
+  .cam-feed img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  /* overlay when offline */
+  .cam-feed .offline-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+    background: #000;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .cam-feed .offline-overlay svg {
+    opacity: 0.35;
+  }
+  .cam-card.running .offline-overlay { display: none; }
+
+  /* card footer */
+  .cam-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .cam-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+
+  .cam-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-bright);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cam-status-label {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .cam-card.running .cam-status-label {
+    color: var(--success);
+  }
+
+  .cam-footer button {
+    padding: 5px 11px;
+    font-size: 11px;
+  }
+
+  /* ── status bar ──────────────────────────────────────────── */
+  footer {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 24px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+  #status-msg {
+    color: var(--accent);
+    font-family: var(--mono);
+  }
+
+  /* ── toast ───────────────────────────────────────────────── */
+  #toast {
+    position: fixed;
+    bottom: 56px;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text-bright);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    white-space: nowrap;
+    z-index: 100;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<!-- ── header ──────────────────────────────────────────────── -->
+<header>
+  <div class="header-left">
+    <h1>RatrixCam</h1>
+    <span id="study-label">Loading…</span>
+  </div>
+  <span id="clock"></span>
+</header>
+
+<!-- ── global control bar ──────────────────────────────────── -->
+<div class="global-bar">
+  <span>All cameras:</span>
+  <button class="btn-start" id="btn-start-all" onclick="startAll()">▶ Start All</button>
+  <button class="btn-stop"  id="btn-stop-all"  onclick="stopAll()">■ Stop All</button>
+  <button class="btn-ghost"                    onclick="pollStatus()">↺ Refresh</button>
+  <span class="save-info" id="save-path"></span>
+</div>
+
+<!-- ── camera grid ─────────────────────────────────────────── -->
+<main>
+  <div id="camera-grid"></div>
+</main>
+
+<!-- ── status footer ───────────────────────────────────────── -->
+<footer>
+  <span id="status-msg">Connecting…</span>
+  <span id="cam-count"></span>
+  <span style="margin-left:auto">Auto-refreshes every 3 s</span>
+</footer>
+
+<div id="toast"></div>
+
+<script>
+/* ── state ─────────────────────────────────────────────────── */
+let cameras = [];          // [{name, row, col, running}]
+let pollTimer = null;
+
+/* ── clock ─────────────────────────────────────────────────── */
+function updateClock() {
+  const now = new Date();
+  document.getElementById("clock").textContent =
+    now.toLocaleDateString() + "  " +
+    now.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ── toast ─────────────────────────────────────────────────── */
+function showToast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 2400);
+}
+
+/* ── API helpers ───────────────────────────────────────────── */
+async function post(url) {
+  const r = await fetch(url, {method: "POST"});
+  return r.json();
+}
+
+async function startCamera(name) {
+  const btn = document.querySelector(`[data-start="${name}"]`);
+  if (btn) { btn.disabled = true; btn.textContent = "Starting…"; }
+  await post(`/api/start/${name}`);
+  showToast(`${name} starting`);
+  setTimeout(pollStatus, 1200);
+}
+
+async function stopCamera(name) {
+  const btn = document.querySelector(`[data-stop="${name}"]`);
+  if (btn) { btn.disabled = true; btn.textContent = "Stopping…"; }
+  await post(`/api/stop/${name}`);
+  showToast(`${name} stopping`);
+  setTimeout(pollStatus, 1500);
+}
+
+async function startAll() {
+  document.getElementById("btn-start-all").disabled = true;
+  await post("/api/start_all");
+  showToast("Starting all cameras…");
+  setTimeout(pollStatus, 1500);
+}
+
+async function stopAll() {
+  document.getElementById("btn-stop-all").disabled = true;
+  await post("/api/stop_all");
+  showToast("Stopping all cameras…");
+  setTimeout(pollStatus, 2000);
+}
+
+/* ── build / update the grid ───────────────────────────────── */
+function buildGrid(cams) {
+  const grid = document.getElementById("camera-grid");
+
+  // decide column count
+  const maxCol = Math.max(...cams.map(c => c.col || 1));
+  const cols = Math.min(maxCol, 4);
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+  // create cards for new cameras
+  cams.forEach(cam => {
+    let card = document.getElementById(`card-${cam.name}`);
+    if (!card) {
+      card = document.createElement("div");
+      card.className = "cam-card";
+      card.id = `card-${cam.name}`;
+      card.innerHTML = `
+        <div class="cam-feed">
+          <img
+            id="img-${cam.name}"
+            src="/stream/${cam.name}"
+            alt="${cam.name}"
+            onerror="this.style.display='none'"
+          />
+          <div class="offline-overlay">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+            <span>Offline</span>
+          </div>
+        </div>
+        <div class="cam-footer">
+          <div class="cam-status-dot"></div>
+          <span class="cam-name">${cam.name}</span>
+          <span class="cam-status-label" id="lbl-${cam.name}">Idle</span>
+          <button class="btn-start" data-start="${cam.name}"
+            onclick="startCamera('${cam.name}')">▶ Start</button>
+          <button class="btn-stop"  data-stop="${cam.name}"
+            onclick="stopCamera('${cam.name}')">■ Stop</button>
+        </div>
+      `;
+      grid.appendChild(card);
+    }
+
+    // update state
+    const running = cam.running;
+    card.classList.toggle("running", running);
+    document.getElementById(`lbl-${cam.name}`).textContent =
+      running ? "Recording" : "Idle";
+
+    // re-enable buttons
+    const startBtn = card.querySelector(`[data-start]`);
+    const stopBtn  = card.querySelector(`[data-stop]`);
+    startBtn.disabled = running;
+    stopBtn.disabled  = !running;
+    startBtn.textContent = "▶ Start";
+    stopBtn.textContent  = "■ Stop";
+
+    // refresh MJPEG src to force reconnect when cam starts/stops
+    const img = document.getElementById(`img-${cam.name}`);
+    if (img) img.style.display = running ? "" : "none";
+  });
+}
+
+/* ── poll /api/status ──────────────────────────────────────── */
+async function pollStatus() {
+  try {
+    const data = await (await fetch("/api/status")).json();
+    cameras = data.cameras;
+
+    document.getElementById("study-label").textContent =
+      `${data.rack_name} — ${data.study_label}`;
+    document.getElementById("save-path").textContent =
+      `Saving to: ${data.save_path}`;
+
+    const running = cameras.filter(c => c.running).length;
+    document.getElementById("cam-count").textContent =
+      `${running} / ${cameras.length} cameras recording`;
+    document.getElementById("status-msg").textContent = "Connected";
+
+    // re-enable global buttons
+    document.getElementById("btn-start-all").disabled = false;
+    document.getElementById("btn-stop-all").disabled  = false;
+
+    buildGrid(cameras);
+  } catch (e) {
+    document.getElementById("status-msg").textContent = "Server unreachable";
+  }
+}
+
+/* ── init ──────────────────────────────────────────────────── */
+pollStatus();
+pollTimer = setInterval(pollStatus, 3000);
+</script>
+</body>
+</html>

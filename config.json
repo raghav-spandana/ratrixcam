@@ -1,8 +1,8 @@
 {
-  "save_path": "/Volumes/data/",
-  "temp_path": "/Users/username/Desktop/temp_videos/",
-  "blank_image": "/Users/username/Desktop/ratrixcam/blanks/offline_status.png",
-  "stills_path": "/Users/username/Desktop/temp_videos/status/",
+  "save_path": "/Users/Spandana/Downloads/ratrixcam_output/",
+  "temp_path": "/Users/Spandana/Downloads/temp_videos/",
+  "blank_image": "/Users/Spandana/Downloads/ratrixcam-main/blanks/offline_status.png",
+  "stills_path": "/Users/Spandana/Downloads/temp_videos/status/",
   "rack_name": "Camera System",
   "study_label": "Generic Study",
    "time_slice": 60,
@@ -11,47 +11,15 @@
   "default_width": 640,
   "default_height": 480,
   "cameras": [
-    {
-      "name": "cam1",
-      "row": 1,
-      "col": 1
-    },
-    {
-      "name": "cam2",
-      "row": 1,
-      "col": 2
-    },
-    {
-      "name": "cam3",
-      "row": 2,
-      "col": 1
-    },
-    {
-      "name": "cam4",
-      "row": 2,
-      "col": 2
-    },
-    {
-      "name": "cam5",
-      "row": 1,
-      "col": 4
-    },
-    {
-      "name": "cam6",
-      "row": 1,
-      "col": 5
-    },
-    {
-      "name": "cam7",
-      "row": 2,
-      "col": 4
-    },
-    {
-      "name": "cam8",
-      "row": 2,
-      "col": 5
-    }
-  ],
+  { "name": "cam1", "row": 1, "col": 1 },
+  { "name": "cam2", "row": 1, "col": 2 },
+  { "name": "cam3", "row": 2, "col": 1 },
+  { "name": "cam4", "row": 2, "col": 2 },
+  { "name": "cam5", "row": 1, "col": 4 },
+  { "name": "cam6", "row": 1, "col": 5 },
+  { "name": "cam7", "row": 2, "col": 4 },
+  { "name": "cam8", "row": 2, "col": 5 }
+],
 
   "default_cam_exposure": -8.0,
   "preview_interval": 1,
