@@ -1,8 +1,8 @@
 {
-  "save_path": "/Users/Spandana/Downloads/ratrixcam_output/",
-  "temp_path": "/Users/Spandana/Downloads/temp_videos/",
-  "blank_image": "/Users/Spandana/Downloads/ratrixcam-main/blanks/offline_status.png",
-  "stills_path": "/Users/Spandana/Downloads/temp_videos/status/",
+  "save_path": "/Users/username/Desktop/ratrixcam_output/",
+  "temp_path": "/Users/username/Desktop/temp_videos/",
+  "blank_image": "/Users/username/Desktop/ratrixcam-main/blanks/offline_status.png",
+  "stills_path": "/Users/username/Desktop/temp_videos/status/",
   "rack_name": "Camera System",
   "study_label": "Generic Study",
    "time_slice": 60,
